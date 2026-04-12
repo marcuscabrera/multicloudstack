@@ -20,7 +20,7 @@
 
 ### Architecture
 - **Single-port ASGI** server (Uvicorn) on port 4566
-- **Multi-cloud router** (`detect_provider()`) auto-detects AWS/Azure/Huawei per request based on headers and URL paths
+- **Multi-cloud router** (`detect_provider()`) auto-detects AWS/Azure/Huawei/GCP per request based on headers and URL paths
 - Each service is an independent Python module with `async handle_request()` and `reset()` functions
 - **`AccountScopedDict`** namespaces all state per account for multi-tenancy
 - **Warm Lambda workers** — persistent subprocess workers for Python/Node.js function execution
@@ -219,7 +219,7 @@ def reset(): ...
 **AWS:**
 1. Create `ministack/services/myservice.py` with `handle_request()` and `reset()`
 2. Register in `SERVICE_HANDLERS` dict in `app.py`
-3. Add detection patterns in `core/router.py`
+3. Add detection patterns in `ministack/core/router.py`
 4. Add test file in `tests/test_myservice.py`
 
 **Azure:**
