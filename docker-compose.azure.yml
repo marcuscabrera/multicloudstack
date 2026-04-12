@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  azurestack:
+    build: .
+    image: ministackorg/ministack:azure
+    container_name: ministack-azure
+    ports:
+      - "4566:4566"
+    environment:
+      - GATEWAY_PORT=4566
+      - LOG_LEVEL=INFO
+      - CLOUD_MODE=azure
+      - AZURE_MODE=1
+      - HUAWEI_MODE=0
+      - AZURE_TENANT_ID=00000000-0000-0000-0000-000000000000
+      - AZURE_SUBSCRIPTION_ID=00000000-0000-0000-0000-000000000001
+      - AZURE_LOCATION=eastus
+      - AZURE_STORAGE_ACCOUNT=devstoreaccount1
+      - AZURE_CLIENT_ID=test
+      - AZURE_CLIENT_SECRET=test
+      - PERSIST_STATE=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4566/_ministack/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ministack-azure-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped

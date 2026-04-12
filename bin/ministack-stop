@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# ministack-stop — Stop a MiniStack cloud environment
+#
+# Usage:
+#   ./bin/ministack-stop              # Stop all environments
+#   ./bin/ministack-stop aws          # Stop AWS only
+#   ./bin/ministack-stop azure        # Stop Azure only
+#   ./bin/ministack-stop huawei       # Stop Huawei Cloud only
+#   ./bin/ministack-stop gcp          # Stop GCP only
+#   ./bin/ministack-stop aws,azure    # Stop multiple clouds (comma-separated)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+print_header() { echo -e "\n${BLUE}╔════════════════════════════════════════╗${NC}"; }
+print_footer() { echo -e "${BLUE}╚════════════════════════════════════════╝${NC}\n"; }
+print_info()  { echo -e "${CYAN}▸ $1${NC}"; }
+print_ok()    { echo -e "${GREEN}✓ $1${NC}"; }
+print_warn()  { echo -e "${YELLOW}⚠ $1${NC}"; }
+
+usage() {
+    echo -e "${BLUE}MiniStack Stop — Multi-Cloud Local Emulator${NC}"
+    echo ""
+    echo "Usage: $0 [cloud,...]"
+    echo ""
+    echo "Cloud options:"
+    echo "  aws          AWS"
+    echo "  azure        Azure"
+    echo "  huawei       Huawei Cloud"
+    echo "  gcp          GCP"
+    echo "  all          All clouds (default)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Stop all clouds"
+    echo "  $0 aws                # Stop AWS only"
+    echo "  $0 azure,gcp          # Stop Azure + GCP"
+    exit 0
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && usage
+
+CLOUD_INPUT="${1:-all}"
+
+if ! command -v docker &> /dev/null; then
+    print_warn "Docker is not installed. Nothing to stop."
+    exit 0
+fi
+
+print_header
+echo -e "${BLUE}║${NC} ${RED}MiniStack Stop${NC}                          ${BLUE}║${NC}"
+print_footer
+
+IFS=',' read -ra CLOUDS <<< "$CLOUD_INPUT"
+
+for cloud in "${CLOUDS[@]}"; do
+    cloud="$(echo "$cloud" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+
+    case "$cloud" in
+        aws|all)
+            print_info "Stopping AWS..."
+            docker compose -f docker-compose.yml down 2>/dev/null || true
+            print_ok "AWS stopped"
+            ;;
+        azure)
+            print_info "Stopping Azure..."
+            docker compose -f docker-compose.azure.yml down 2>/dev/null || true
+            print_ok "Azure stopped"
+            ;;
+        huawei)
+            print_info "Stopping Huawei Cloud..."
+            docker compose -f docker-compose.huawei.yml down 2>/dev/null || true
+            print_ok "Huawei Cloud stopped"
+            ;;
+        gcp)
+            print_info "Stopping GCP..."
+            docker compose -f docker-compose.gcp.yml down 2>/dev/null || true
+            print_ok "GCP stopped"
+            ;;
+        *)
+            print_warn "Unknown cloud: $cloud (skipping)"
+            ;;
+    esac
+done
+
+echo ""
+print_ok "MiniStack stopped!"
+echo ""
+echo "To remove all orphaned containers and volumes:"
+echo "  docker compose down --volumes --remove-orphans"
+echo "  docker compose -f docker-compose.azure.yml down --volumes"
+echo "  docker compose -f docker-compose.huawei.yml down --volumes"
+echo "  docker compose -f docker-compose.gcp.yml down --volumes"

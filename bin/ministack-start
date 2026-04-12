@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# ministack-start — Start a MiniStack cloud environment
+#
+# Usage:
+#   ./bin/ministack-start              # All clouds (default)
+#   ./bin/ministack-start aws          # AWS only
+#   ./bin/ministack-start azure        # Azure only
+#   ./bin/ministack-start huawei       # Huawei Cloud only
+#   ./bin/ministack-start gcp          # GCP only
+#   ./bin/ministack-start aws,azure    # Multiple clouds (comma-separated)
+#
+# To stop: ./bin/ministack-stop [cloud]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+print_header() { echo -e "\n${BLUE}╔════════════════════════════════════════╗${NC}"; }
+print_footer() { echo -e "${BLUE}╚════════════════════════════════════════╝${NC}\n"; }
+print_info()  { echo -e "${CYAN}▸ $1${NC}"; }
+print_ok()    { echo -e "${GREEN}✓ $1${NC}"; }
+print_warn()  { echo -e "${YELLOW}⚠ $1${NC}"; }
+print_err()   { echo -e "${RED}✗ $1${NC}"; }
+
+usage() {
+    echo -e "${BLUE}MiniStack Start — Multi-Cloud Local Emulator${NC}"
+    echo ""
+    echo "Usage: $0 [cloud,...]"
+    echo ""
+    echo "Cloud options:"
+    echo "  aws          AWS (41 services)"
+    echo "  azure        Azure (30 services)"
+    echo "  huawei       Huawei Cloud (17 services)"
+    echo "  gcp          GCP (14 services)"
+    echo "  all          All clouds (default)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Start all clouds"
+    echo "  $0 aws                # AWS only"
+    echo "  $0 azure,gcp          # Azure + GCP"
+    echo "  $0 all                # All clouds"
+    echo ""
+    echo "Stop with: ./bin/ministack-stop [cloud]"
+    exit 0
+}
+
+# Show help if requested
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && usage
+
+# Parse cloud argument
+CLOUD_INPUT="${1:-all}"
+
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    print_err "Docker is not installed. Please install Docker first."
+    exit 1
+fi
+
+if ! docker info &> /dev/null; then
+    print_err "Docker is not running. Please start Docker first."
+    exit 1
+fi
+
+print_header
+echo -e "${BLUE}║${NC} ${GREEN}MiniStack Start${NC}                         ${BLUE}║${NC}"
+print_footer
+
+# Build and start the requested clouds
+IFS=',' read -ra CLOUDS <<< "$CLOUD_INPUT"
+
+for cloud in "${CLOUDS[@]}"; do
+    cloud="$(echo "$cloud" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+
+    case "$cloud" in
+        aws|all)
+            print_info "Starting AWS (41 services)..."
+            docker compose -f docker-compose.yml up -d --build 2>&1 | grep -v "^$" || true
+            print_ok "AWS started"
+            ;;
+        azure)
+            print_info "Starting Azure (30 services)..."
+            docker compose -f docker-compose.azure.yml up -d --build 2>&1 | grep -v "^$" || true
+            print_ok "Azure started"
+            ;;
+        huawei)
+            print_info "Starting Huawei Cloud (17 services)..."
+            docker compose -f docker-compose.huawei.yml up -d --build 2>&1 | grep -v "^$" || true
+            print_ok "Huawei Cloud started"
+            ;;
+        gcp)
+            print_info "Starting GCP (14 services)..."
+            docker compose -f docker-compose.gcp.yml up -d --build 2>&1 | grep -v "^$" || true
+            print_ok "GCP started"
+            ;;
+        *)
+            print_err "Unknown cloud: $cloud"
+            echo "  Valid options: aws, azure, huawei, gcp, all"
+            exit 1
+            ;;
+    esac
+done
+
+echo ""
+print_info "Waiting for services to become healthy..."
+sleep 3
+
+# Health checks
+echo ""
+print_header
+echo -e "${BLUE}║${NC} ${GREEN}Health Status${NC}                          ${BLUE}║${NC}"
+print_footer
+
+PORT="${GATEWAY_PORT:-4566}"
+
+for cloud in "${CLOUDS[@]}"; do
+    cloud="$(echo "$cloud" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+
+    case "$cloud" in
+        aws|all)
+            if curl -sf "http://localhost:$PORT/_ministack/health" > /dev/null 2>&1; then
+                print_ok "AWS     — http://localhost:$PORT/_ministack/health"
+            else
+                print_warn "AWS     — Starting... (check: docker logs ministack)"
+            fi
+            ;;
+        azure)
+            if curl -sf "http://localhost:$PORT/_azure/health" > /dev/null 2>&1; then
+                print_ok "Azure   — http://localhost:$PORT/_azure/health"
+            else
+                print_warn "Azure   — Starting... (check: docker logs ministack-azure)"
+            fi
+            ;;
+        huawei)
+            if curl -sf "http://localhost:$PORT/_huawei/health" > /dev/null 2>&1; then
+                print_ok "Huawei  — http://localhost:$PORT/_huawei/health"
+            else
+                print_warn "Huawei  — Starting... (check: docker logs ministack-huawei)"
+            fi
+            ;;
+        gcp)
+            if curl -sf "http://localhost:$PORT/_gcp/health" > /dev/null 2>&1; then
+                print_ok "GCP     — http://localhost:$PORT/_gcp/health"
+            else
+                print_warn "GCP     — Starting... (check: docker logs ministack-gcp)"
+            fi
+            ;;
+    esac
+done
+
+echo ""
+print_info "Quick commands:"
+echo "  ./bin/ministack-stop              # Stop all"
+echo "  ./bin/ministack-stop aws          # Stop AWS only"
+echo "  docker compose logs -f            # Follow AWS logs"
+echo "  docker compose -f docker-compose.azure.yml logs -f  # Azure logs"
+echo ""
+print_ok "MiniStack is ready!"
