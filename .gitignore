@@ -1,52 +1,68 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg
-*.egg-info/
-dist/
-build/
-eggs/
-parts/
-var/
-sdist/
-develop-eggs/
-.installed.cfg
-lib/
-lib64/
-.eggs/
-*.so
-
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# Testing
-.pytest_cache/
+```
+# Test and coverage reports
 .coverage
-coverage.xml
 htmlcov/
-.tox/
+.coverage.*
+.pytest_cache/
+__pycache__/
 
-# IDE
-.vscode/settings.json
-.idea/
-*.swp
-*.swo
-.DS_Store
-
-# Docker
-data/
-
-# Secrets / local config
+# Environment variables
 .env
 .env.local
-*.pem
-*.key
+*.env.*
 
 # Logs
 *.log
+
+# Dependencies
+.venv/
+venv/
+__pycache__/
+*.pyc
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Coverage
+.coverage
+htmlcov/
+.nox/
+.tox/
+.coverage.*
+.coverage.*.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage*
+.cover*
+
+# PyTest
+.pytest_cache/
+
+# Docker
+.dockerenv
+Dockerfile*
+docker-compose*
+
+# IDE
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+```
