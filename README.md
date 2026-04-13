@@ -2,7 +2,7 @@
   <img src="ministack_logo.png" alt="MiniStack — Free Open-Source Multi-Cloud Emulator" width="400"/>
 </p>
 
-<h1 align="center">MiniStack</h1>
+<h1 align="center">MiniStack multi-cloud</h1>
 <p align="center"><strong>Emulador local multi-cloud gratuito e open-source. Para sempre grátis.</strong></p>
 <p align="center"><strong>Free, open-source multi-cloud local emulator. Free forever.</strong></p>
 <p align="center">41 AWS · 30 Azure · 17 Huawei Cloud · 14 GCP = <strong>102 serviços</strong> em uma única porta · MIT licensed</p>
