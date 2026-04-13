@@ -1,0 +1,6 @@
+# MiniStack Terraform variable defaults
+huaweicloud_access_key = "test"
+huaweicloud_secret_key = "test"
+huaweicloud_region     = "sa-brazil-1"
+huaweicloud_project_id = "0000000000000000"
+environment            = "dev"
