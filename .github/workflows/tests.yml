@@ -1,0 +1,87 @@
+name: Multi-Cloud Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [aws-only, gcp-only, azure-only, huawei-only, all]
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+      
+    - name: Install dependencies
+      run: |
+        pip install -e .
+        pip install -r requirements-test.txt
+      
+    - name: Start MiniStack
+      run: |
+        REDIS_HOST=localhost python -m uvicorn ministack.app:app --host 0.0.0.0 --port 4566 &
+        sleep 5
+        curl -sf http://localhost:4566/_ministack/health
+        
+    - name: Run multi-cloud tests
+      env:
+        CLOUD_MODE: ${{ matrix.mode }}
+      run: |
+        pytest tests/test_multicloud/ -v -n auto --tb=short
+        
+    - name: Run AWS regression tests (existing)
+      if: matrix.mode == 'all'
+      run: |
+        pytest tests/test_s3.py tests/test_sqs.py tests/test_lambda.py -v --tb=short
+
+  coverage:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        pip install -e .
+        pip install -r requirements-test.txt
+        
+    - name: Start MiniStack
+      run: |
+        REDIS_HOST=localhost python -m uvicorn ministack.app:app --host 0.0.0.0 --port 4566 &
+        sleep 5
+        
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ --cov=ministack --cov-report=xml --cov-report=html
+        
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        fail_ci_if_error: false
