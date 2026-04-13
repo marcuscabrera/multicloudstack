@@ -1,0 +1,9 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+
+# Custom variables (copy terraform.tfvars.example instead)
+terraform.tfvars
