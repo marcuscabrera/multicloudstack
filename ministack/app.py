@@ -653,6 +653,28 @@ async def app(scope, receive, send):
         }).encode())
         return
 
+    # ------------------------------------------------------------------
+    # Dashboard endpoint
+    # ------------------------------------------------------------------
+    if path in ("/", "/dashboard", "/_ministack/dashboard") and method == "GET":
+        import importlib.resources
+        try:
+            # Python 3.9+ compatible resource reading
+            dashboard_html = importlib.resources.files("ministack.static").joinpath("dashboard.html").read_bytes()
+        except Exception:
+            # Fallback: try direct path
+            import os
+            dashboard_path = os.path.join(os.path.dirname(__file__), "static", "dashboard.html")
+            if os.path.exists(dashboard_path):
+                with open(dashboard_path, "rb") as f:
+                    dashboard_html = f.read()
+            else:
+                dashboard_html = b"<h1>Dashboard not found</h1>"
+        await _send_response(send, 200, {
+            "Content-Type": "text/html; charset=utf-8",
+        }, dashboard_html)
+        return
+
     if method == "OPTIONS":
         await _send_response(send, 200, {
             "Access-Control-Allow-Origin": "*",

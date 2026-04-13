@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniStack — Multi-Cloud Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-aws: #ff9900;
+            --accent-azure: #0078d4;
+            --accent-huawei: #e6320a;
+            --accent-gcp: #4285f4;
+            --accent-multi: #8b5cf6;
+            --status-available: #22c55e;
+            --status-unavailable: #ef4444;
+            --status-degraded: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(30, 41, 59, 0.85) !important;
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+
+        .navbar-brand .logo-text {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats-bar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem 1rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.25rem;
+        }
+
+        .cloud-tab {
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            color: var(--text-secondary);
+            background: transparent;
+        }
+
+        .cloud-tab:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        .cloud-tab.active {
+            color: var(--text-primary);
+        }
+
+        .cloud-tab.active.aws { border-color: var(--accent-aws); color: var(--accent-aws); }
+        .cloud-tab.active.azure { border-color: var(--accent-azure); color: var(--accent-azure); }
+        .cloud-tab.active.huawei { border-color: var(--accent-huawei); color: var(--accent-huawei); }
+        .cloud-tab.active.gcp { border-color: var(--accent-gcp); color: var(--accent-gcp); }
+        .cloud-tab.active.multi { border-color: var(--accent-multi); color: var(--accent-multi); }
+
+        .service-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.2s;
+            height: 100%;
+        }
+
+        .service-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .service-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .service-icon.aws { background: rgba(255, 153, 0, 0.15); color: var(--accent-aws); }
+        .service-icon.azure { background: rgba(0, 120, 212, 0.15); color: var(--accent-azure); }
+        .service-icon.huawei { background: rgba(230, 50, 10, 0.15); color: var(--accent-huawei); }
+        .service-icon.gcp { background: rgba(66, 133, 244, 0.15); color: var(--accent-gcp); }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .service-key {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.available {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--status-available);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .summary-card .icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 1rem;
+        }
+
+        .summary-card .icon.aws { background: rgba(255, 153, 0, 0.15); color: var(--accent-aws); }
+        .summary-card .icon.azure { background: rgba(0, 120, 212, 0.15); color: var(--accent-azure); }
+        .summary-card .icon.huawei { background: rgba(230, 50, 10, 0.15); color: var(--accent-huawei); }
+        .summary-card .icon.gcp { background: rgba(66, 133, 244, 0.15); color: var(--accent-gcp); }
+        .summary-card .icon.multi { background: rgba(139, 92, 246, 0.15); color: var(--accent-multi); }
+
+        .last-updated {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .refresh-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .refresh-btn i.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .search-input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border-radius: 0.5rem;
+            width: 250px;
+        }
+
+        .search-input::placeholder { color: var(--text-secondary); }
+        .search-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+        }
+
+        .search-wrapper { position: relative; }
+        .search-wrapper i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s;
+        }
+
+        #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+    <div class="loader mb-3"></div>
+    <div class="text-secondary">Loading Multi-Cloud Dashboard...</div>
+</div>
+
+<nav class="navbar navbar-dark">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-cubes me-2"></i>
+            <span class="logo-text">MiniStack</span>
+            <span class="badge bg-secondary ms-2" style="font-size:0.65rem">v3.0.0.dev</span>
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" class="search-input" id="searchInput" placeholder="Search services...">
+            </div>
+            <span class="last-updated" id="lastUpdated">Last updated: --</span>
+            <button class="refresh-btn" id="refreshBtn" title="Refresh">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="stats-bar">
+    <div class="container-fluid px-4">
+        <div class="row" id="statsRow">
+            <div class="col">
+                <div class="d-flex justify-content-center gap-4">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statTotal" style="color: var(--accent-multi)">0</div>
+                        <div class="stat-label">Total Services</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statAWS" style="color: var(--accent-aws)">0</div>
+                        <div class="stat-label">AWS</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statAzure" style="color: var(--accent-azure)">0</div>
+                        <div class="stat-label">Azure</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statHuawei" style="color: var(--accent-huawei)">0</div>
+                        <div class="stat-label">Huawei</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statGCP" style="color: var(--accent-gcp)">0</div>
+                        <div class="stat-label">GCP</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid px-4 py-3">
+    <ul class="nav gap-2 mb-4" id="cloudTabs">
+        <li><button class="cloud-tab active multi" data-tab="multi"><i class="fas fa-globe me-1"></i>All Clouds</button></li>
+        <li><button class="cloud-tab aws" data-tab="aws"><i class="fab fa-aws me-1"></i>AWS</button></li>
+        <li><button class="cloud-tab azure" data-tab="azure"><i class="fab fa-microsoft me-1"></i>Azure</button></li>
+        <li><button class="cloud-tab huawei" data-tab="huawei"><i class="fas fa-cloud me-1"></i>Huawei</button></li>
+        <li><button class="cloud-tab gcp" data-tab="gcp"><i class="fab fa-google me-1"></i>GCP</button></li>
+    </ul>
+
+    <!-- Multi Cloud Summary -->
+    <div class="tab-content active" id="tab-multi">
+        <div class="row g-4 mb-4" id="summaryCards"></div>
+        <h5 class="mb-3"><i class="fas fa-th me-2"></i>All Services</h5>
+        <div class="row g-3" id="grid-multi"></div>
+    </div>
+
+    <div class="tab-content" id="tab-aws">
+        <div class="row g-3" id="grid-aws"></div>
+    </div>
+
+    <div class="tab-content" id="tab-azure">
+        <div class="row g-3" id="grid-azure"></div>
+    </div>
+
+    <div class="tab-content" id="tab-huawei">
+        <div class="row g-3" id="grid-huawei"></div>
+    </div>
+
+    <div class="tab-content" id="tab-gcp">
+        <div class="row g-3" id="grid-gcp"></div>
+    </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+const cloudProviders = {
+    aws: { name: 'AWS', color: 'aws', icon: 'fab fa-aws', endpoint: '/_ministack/health' },
+    azure: { name: 'Azure', color: 'azure', icon: 'fab fa-microsoft', endpoint: '/_azure/health' },
+    huawei: { name: 'Huawei Cloud', color: 'huawei', icon: 'fas fa-cloud', endpoint: '/_huawei/health' },
+    gcp: { name: 'GCP', color: 'gcp', icon: 'fab fa-google', endpoint: '/_gcp/health' },
+};
+
+const serviceIcons = {
+    // AWS
+    s3: { icon: 'fas fa-database', label: 'S3' },
+    sqs: { icon: 'fas fa-envelope', label: 'SQS' },
+    dynamodb: { icon: 'fas fa-table', label: 'DynamoDB' },
+    lambda: { icon: 'fas fa-bolt', label: 'Lambda' },
+    sns: { icon: 'fas fa-bell', label: 'SNS' },
+    iam: { icon: 'fas fa-user-shield', label: 'IAM' },
+    sts: { icon: 'fas fa-key', label: 'STS' },
+    rds: { icon: 'fas fa-server', label: 'RDS' },
+    ec2: { icon: 'fas fa-hdd', label: 'EC2' },
+    ecs: { icon: 'fas fa-dharmachakra', label: 'ECS' },
+    cloudformation: { icon: 'fas fa-layer-group', label: 'CloudFormation' },
+    secretsmanager: { icon: 'fas fa-lock', label: 'Secrets Manager' },
+    logs: { icon: 'fas fa-scroll', label: 'CloudWatch Logs' },
+    ssm: { icon: 'fas fa-cogs', label: 'SSM' },
+    events: { icon: 'fas fa-calendar-alt', label: 'EventBridge' },
+    kinesis: { icon: 'fas fa-stream', label: 'Kinesis' },
+    monitoring: { icon: 'fas fa-chart-line', label: 'CloudWatch' },
+    ses: { icon: 'fas fa-envelope-open-text', label: 'SES' },
+    acm: { icon: 'fas fa-certificate', label: 'ACM' },
+    wafv2: { icon: 'fas fa-shield-alt', label: 'WAF' },
+    states: { icon: 'fas fa-project-diagram', label: 'Step Functions' },
+    ecr: { icon: 'fas fa-box-open', label: 'ECR' },
+    elasticache: { icon: 'fas fa-memory', label: 'ElastiCache' },
+    glue: { icon: 'fas fa-magic', label: 'Glue' },
+    athena: { icon: 'fas fa-search', label: 'Athena' },
+    apigateway: { icon: 'fas fa-plug', label: 'API Gateway' },
+    firehose: { icon: 'fas fa-fire', label: 'Firehose' },
+    route53: { icon: 'fas fa-globe-americas', label: 'Route 53' },
+    'cognito-idp': { icon: 'fas fa-users', label: 'Cognito' },
+    'cognito-identity': { icon: 'fas fa-id-card', label: 'Cognito Identity' },
+    elasticmapreduce: { icon: 'fas fa-chart-bar', label: 'EMR' },
+    elasticloadbalancing: { icon: 'fas fa-balance-scale', label: 'ALB/ELB' },
+    elasticfilesystem: { icon: 'fas fa-folder-open', label: 'EFS' },
+    kms: { icon: 'fas fa-key', label: 'KMS' },
+    cloudfront: { icon: 'fas fa-globe', label: 'CloudFront' },
+    codebuild: { icon: 'fas fa-hammer', label: 'CodeBuild' },
+    appsync: { icon: 'fas fa-exchange-alt', label: 'AppSync' },
+    servicediscovery: { icon: 'fas fa-compass', label: 'Cloud Map' },
+    s3files: { icon: 'fas fa-file-alt', label: 'S3 Files' },
+    'rds-data': { icon: 'fas fa-database', label: 'RDS Data API' },
+    autoscaling: { icon: 'fas fa-expand-arrows-alt', label: 'Auto Scaling' },
+    // Huawei
+    obs: { icon: 'fas fa-database', label: 'OBS' },
+    iam_hw: { icon: 'fas fa-user-shield', label: 'IAM' },
+    smn: { icon: 'fas fa-bell', label: 'SMN' },
+    functiongraph: { icon: 'fas fa-bolt', label: 'FunctionGraph' },
+    rds_hw: { icon: 'fas fa-server', label: 'RDS' },
+    dcs: { icon: 'fas fa-memory', label: 'DCS' },
+    lts: { icon: 'fas fa-scroll', label: 'LTS' },
+    vpc_hw: { icon: 'fas fa-network-wired', label: 'VPC' },
+    dms: { icon: 'fas fa-envelope', label: 'DMS' },
+    aom: { icon: 'fas fa-chart-line', label: 'AOM' },
+    ecs_hw: { icon: 'fas fa-hdd', label: 'ECS' },
+    apig: { icon: 'fas fa-plug', label: 'APIG' },
+    dis: { icon: 'fas fa-stream', label: 'DIS' },
+    kms_hw: { icon: 'fas fa-key', label: 'KMS' },
+    csms: { icon: 'fas fa-lock', label: 'CSMS' },
+    cce: { icon: 'fas fa-dharmachakra', label: 'CCE' },
+    rfs: { icon: 'fas fa-layer-group', label: 'RFS' },
+    // Azure
+    azure_blob: { icon: 'fas fa-database', label: 'Blob Storage' },
+    entra_id: { icon: 'fas fa-user-shield', label: 'Entra ID' },
+    azure_service_bus: { icon: 'fas fa-bus', label: 'Service Bus' },
+    azure_functions: { icon: 'fas fa-bolt', label: 'Functions' },
+    azure_cosmos: { icon: 'fas fa-globe', label: 'Cosmos DB' },
+    azure_kv_secrets: { icon: 'fas fa-lock', label: 'Key Vault Secrets' },
+    azure_kv_keys: { icon: 'fas fa-key', label: 'Key Vault Keys' },
+    azure_kv_certs: { icon: 'fas fa-certificate', label: 'Key Vault Certs' },
+    azure_sql: { icon: 'fas fa-server', label: 'Azure SQL' },
+    azure_cache_redis: { icon: 'fas fa-memory', label: 'Cache Redis' },
+    azure_monitor_logs: { icon: 'fas fa-scroll', label: 'Monitor Logs' },
+    azure_monitor_metrics: { icon: 'fas fa-chart-line', label: 'Monitor Metrics' },
+    azure_event_hubs: { icon: 'fas fa-broadcast-tower', label: 'Event Hubs' },
+    azure_event_grid: { icon: 'fas fa-th', label: 'Event Grid' },
+    azure_virtual_machines: { icon: 'fas fa-desktop', label: 'Virtual Machines' },
+    azure_container_instances: { icon: 'fas fa-box', label: 'Container Instances' },
+    azure_container_registry: { icon: 'fas fa-box-open', label: 'Container Registry' },
+    azure_arm: { icon: 'fas fa-layer-group', label: 'ARM' },
+    azure_cdn: { icon: 'fas fa-globe', label: 'CDN' },
+    azure_logic_apps: { icon: 'fas fa-project-diagram', label: 'Logic Apps' },
+    azure_aad_b2c: { icon: 'fas fa-users', label: 'AAD B2C' },
+    azure_data_factory: { icon: 'fas fa-industry', label: 'Data Factory' },
+    azure_synapse: { icon: 'fas fa-chart-bar', label: 'Synapse' },
+    azure_communication_email: { icon: 'fas fa-envelope', label: 'Comm Email' },
+    azure_dns: { icon: 'fas fa-globe-americas', label: 'DNS' },
+    azure_load_balancer: { icon: 'fas fa-balance-scale', label: 'Load Balancer' },
+    azure_app_configuration: { icon: 'fas fa-cogs', label: 'App Config' },
+    azure_stream_analytics: { icon: 'fas fa-stream', label: 'Stream Analytics' },
+    azure_storage_queue: { icon: 'fas fa-envelope', label: 'Storage Queue' },
+    azure_api_management: { icon: 'fas fa-plug', label: 'API Management' },
+    // GCP
+    gcp_storage: { icon: 'fas fa-database', label: 'Cloud Storage' },
+    gcp_pubsub: { icon: 'fas fa-broadcast-tower', label: 'Pub/Sub' },
+    gcp_functions: { icon: 'fas fa-bolt', label: 'Cloud Functions' },
+    gcp_bigquery: { icon: 'fas fa-search', label: 'BigQuery' },
+    gcp_sql: { icon: 'fas fa-server', label: 'Cloud SQL' },
+    gcp_run: { icon: 'fas fa-play-circle', label: 'Cloud Run' },
+    gcp_logging: { icon: 'fas fa-scroll', label: 'Logging' },
+    gcp_monitoring: { icon: 'fas fa-chart-line', label: 'Monitoring' },
+    gcp_secretmanager: { icon: 'fas fa-lock', label: 'Secret Manager' },
+    gcp_kms: { icon: 'fas fa-key', label: 'KMS' },
+    gcp_compute: { icon: 'fas fa-hdd', label: 'Compute' },
+    gcp_artifactregistry: { icon: 'fas fa-box-open', label: 'Artifact Registry' },
+    gcp_metadata: { icon: 'fas fa-info-circle', label: 'Metadata' },
+    gcp_iam: { icon: 'fas fa-user-shield', label: 'IAM' },
+};
+
+let allData = {};
+
+async function fetchHealth() {
+    const results = {};
+    const promises = Object.entries(cloudProviders).map(async ([key, provider]) => {
+        try {
+            const resp = await fetch(BASE_URL + provider.endpoint);
+            const json = await resp.json();
+            results[key] = json;
+        } catch (e) {
+            results[key] = { services: {}, error: e.message };
+        }
+    });
+    await Promise.all(promises);
+    return results;
+}
+
+function renderServiceCard(key, status, cloud) {
+    const meta = serviceIcons[key] || { icon: 'fas fa-cube', label: key };
+    return `
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 service-col" data-name="${meta.label.toLowerCase()} ${key.toLowerCase()}">
+            <div class="service-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="service-icon ${cloud}">
+                        <i class="${meta.icon}"></i>
+                    </div>
+                    <span class="status-badge available">
+                        <span class="status-dot"></span>
+                        ${status}
+                    </span>
+                </div>
+                <div class="service-name">${meta.label}</div>
+                <div class="service-key">${key}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSummaryCards(data) {
+    const container = document.getElementById('summaryCards');
+    let html = '';
+    const summaries = [
+        { key: 'aws', name: 'Amazon Web Services', count: Object.keys(data.aws?.services || {}).length, color: 'aws' },
+        { key: 'azure', name: 'Microsoft Azure', count: Object.keys(data.azure?.services || {}).length, color: 'azure' },
+        { key: 'huawei', name: 'Huawei Cloud', count: Object.keys(data.huawei?.services || {}).length, color: 'huawei' },
+        { key: 'gcp', name: 'Google Cloud Platform', count: Object.keys(data.gcp?.services || {}).length, color: 'gcp' },
+    ];
+
+    summaries.forEach(s => {
+        html += `
+            <div class="col-md-3 col-sm-6">
+                <div class="summary-card">
+                    <div class="icon ${s.color}">
+                        <i class="${cloudProviders[s.key].icon}"></i>
+                    </div>
+                    <h3 class="mb-1" style="color: var(--accent-${s.color})">${s.count}</h3>
+                    <div class="text-secondary mb-2">${s.name}</div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="switchTab('${s.key}')">
+                        View Services <i class="fas fa-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function renderGrids(data) {
+    // AWS
+    const awsServices = data.aws?.services || {};
+    document.getElementById('grid-aws').innerHTML = Object.entries(awsServices)
+        .map(([k, v]) => renderServiceCard(k, v, 'aws')).join('');
+
+    // Azure
+    const azureServices = data.azure?.services || {};
+    document.getElementById('grid-azure').innerHTML = Object.entries(azureServices)
+        .map(([k, v]) => renderServiceCard(k, v, 'azure')).join('');
+
+    // Huawei
+    const huaweiServices = data.huawei?.services || {};
+    document.getElementById('grid-huawei').innerHTML = Object.entries(huaweiServices)
+        .map(([k, v]) => renderServiceCard(k, v, 'huawei')).join('');
+
+    // GCP
+    const gcpServices = data.gcp?.services || {};
+    document.getElementById('grid-gcp').innerHTML = Object.entries(gcpServices)
+        .map(([k, v]) => renderServiceCard(k, v, 'gcp')).join('');
+
+    // Multi (all combined)
+    const allServices = [
+        ...Object.entries(awsServices).map(([k,v]) => [k,v,'aws']),
+        ...Object.entries(azureServices).map(([k,v]) => [k,v,'azure']),
+        ...Object.entries(huaweiServices).map(([k,v]) => [k,v,'huawei']),
+        ...Object.entries(gcpServices).map(([k,v]) => [k,v,'gcp']),
+    ];
+    document.getElementById('grid-multi').innerHTML = allServices
+        .map(([k, v, c]) => renderServiceCard(k, v, c)).join('');
+
+    // Stats
+    document.getElementById('statTotal').textContent = allServices.length;
+    document.getElementById('statAWS').textContent = Object.keys(awsServices).length;
+    document.getElementById('statAzure').textContent = Object.keys(azureServices).length;
+    document.getElementById('statHuawei').textContent = Object.keys(huaweiServices).length;
+    document.getElementById('statGCP').textContent = Object.keys(gcpServices).length;
+}
+
+async function refresh() {
+    const btn = document.getElementById('refreshBtn');
+    const icon = btn.querySelector('i');
+    icon.classList.add('spinning');
+    btn.disabled = true;
+
+    allData = await fetchHealth();
+    renderSummaryCards(allData);
+    renderGrids(allData);
+
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+
+    icon.classList.remove('spinning');
+    btn.disabled = false;
+
+    document.getElementById('loading-overlay').classList.add('hidden');
+}
+
+// Tab switching
+document.querySelectorAll('.cloud-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.cloud-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.tab;
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        document.getElementById('tab-' + target).classList.add('active');
+    });
+});
+
+function switchTab(tab) {
+    document.querySelectorAll('.cloud-tab').forEach(t => {
+        t.classList.remove('active');
+        if (t.dataset.tab === tab) t.classList.add('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    document.querySelectorAll('.service-col').forEach(col => {
+        const name = col.dataset.name;
+        col.style.display = name.includes(query) ? '' : 'none';
+    });
+});
+
+// Auto-refresh every 30s
+setInterval(refresh, 30000);
+
+// Initial load
+refresh();
+</script>
+</body>
+</html>
